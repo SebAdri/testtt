@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+.vs/
+.vscode/
+.git/
+database/
+*.user
+Directory.Build.props
+Dockerfile
+.dockerignore
+docker-compose*.yml

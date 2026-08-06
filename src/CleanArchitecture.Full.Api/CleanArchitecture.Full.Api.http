@@ -1,0 +1,18 @@
+@CleanArchitecture.Full.Api_HostAddress = http://localhost:5264
+
+GET {{CleanArchitecture.Full.Api_HostAddress}}/api/accounts
+Accept: application/json
+
+###
+
+POST {{CleanArchitecture.Full.Api_HostAddress}}/api/accounts
+Content-Type: application/json
+
+{
+  "accountNumber": "ACC-0004",
+  "holderName": "Margaret Hamilton",
+  "balance": 5000,
+  "status": "Active"
+}
+
+###

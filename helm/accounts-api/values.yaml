@@ -1,0 +1,54 @@
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: docker.io/19942709/accounts-api
+  tag: latest
+  pullPolicy: Always
+
+containerPort: 8080
+
+# Datos no sensibles -> ConfigMap
+appName: CleanArchitecture.Full.Api
+aspnetEnvironment: Development
+
+seq:
+  url: http://seq:5341
+
+# Datos de conexión a la base -> Secret (se arma la connection string en el template)
+postgres:
+  host: postgres
+  port: 5432
+  database: accountsdb
+  username: postgres
+  password: postgres
+
+service:
+  type: NodePort
+  port: 8080
+  targetPort: 8080
+  nodePort: 30080
+
+# Init container que espera a que Postgres esté listo antes de arrancar la API
+waitForPostgres:
+  enabled: true
+  image: postgres:16
+
+probes:
+  path: /api/accounts
+  readiness:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  liveness:
+    initialDelaySeconds: 20
+    periodSeconds: 15
+
+resources: {}
+  # limits:
+  #   cpu: 250m
+  #   memory: 256Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi

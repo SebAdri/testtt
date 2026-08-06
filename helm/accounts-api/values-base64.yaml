@@ -1,0 +1,14 @@
+# -----------------------------------------------------------------------------
+# Overlay de values.yaml para usar junto con templates/secret-base64.yaml
+# -----------------------------------------------------------------------------
+# Contiene la misma connection string que arma secret.yaml a partir de
+# values.yaml (postgres.host/port/database/username/password), pero ya
+# codificada en base64, porque el Secret "data" no la codifica por nosotros.
+#
+# Generado con:
+#   printf "Host=postgres;Port=5432;Database=accountsdb;Username=postgres;Password=postgres" | base64
+#
+# Uso: helm install ... -f values.yaml -f values-base64.yaml
+
+postgres:
+  connectionStringBase64: "SG9zdD1wb3N0Z3JlcztQb3J0PTU0MzI7RGF0YWJhc2U9YWNjb3VudHNkYjtVc2VybmFtZT1wb3N0Z3JlcztQYXNzd29yZD1wb3N0Z3Jlcw=="

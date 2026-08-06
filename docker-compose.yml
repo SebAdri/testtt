@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: accounts-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: accountsdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - accounts_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d accountsdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  seq:
+    image: datalust/seq:latest
+    container_name: accounts-seq
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "5341:80"
+    volumes:
+      - accounts_seq_data:/data
+
+  accounts-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: accounts-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      APPLICATION_NAME: CleanArchitecture.Full.Api
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=accountsdb;Username=postgres;Password=postgres
+      Seq__ServerUrl: http://seq:80
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seq:
+        condition: service_started
+
+volumes:
+  accounts_postgres_data:
+  accounts_seq_data:
