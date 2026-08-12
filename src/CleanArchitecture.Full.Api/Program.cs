@@ -3,9 +3,12 @@ using CleanArchitecture.Full.Api.Middleware;
 using CleanArchitecture.Full.Application;
 using CleanArchitecture.Full.Infrastructure;
 using CleanArchitecture.Full.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Serilog;
+using Serilog.Events;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Async(a => a.Console())
@@ -21,8 +24,8 @@ try
         var seqUrl = context.Configuration["Seq:ServerUrl"] ?? "http://localhost:5341";
 
         loggerConfiguration
+            // ReadFrom.Configuration aplica niveles, enrichers y propiedades de appsettings.json.
             .ReadFrom.Configuration(context.Configuration)
-            .Enrich.FromLogContext()
             .Enrich.WithProperty("Application", applicationName)
             // Los sinks corren en un buffer en background (Serilog.Sinks.Async):
             // el hilo que escribe el log no espera a que la escritura a consola/Seq termine.
@@ -35,8 +38,33 @@ try
     builder.Services.AddOpenApi();
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddHealthChecks()
+        .AddDbContextCheck<AppDbContext>(
+            name: "postgresql",
+            failureStatus: HealthStatus.Unhealthy,
+            tags: ["ready"]);
 
     var app = builder.Build();
+    
+    app.UseSerilogRequestLogging(options =>
+    {
+        // Las probes son frecuentes: se conservan a nivel Debug sin bombardear a Seq.
+        options.GetLevel = (httpContext, _, exception) =>
+            httpContext.Request.Path.StartsWithSegments("/health")
+                ? LogEventLevel.Debug
+                : exception is not null || httpContext.Response.StatusCode >= 500
+                    ? LogEventLevel.Error
+                    : LogEventLevel.Information;
+
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set("RequestId", httpContext.TraceIdentifier);
+            diagnosticContext.Set("ClientIp", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+            diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value ?? "unknown");
+            diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+            diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].ToString());
+        };
+    });
 
     app.UseValidationExceptionHandling();
 
@@ -61,12 +89,20 @@ try
 
     app.MapControllers();
     app.MapAccountEndpoints();
+    app.MapHealthChecks("/health/live", new HealthCheckOptions
+    {
+        Predicate = _ => false
+    });
+    app.MapHealthChecks("/health/ready", new HealthCheckOptions
+    {
+        Predicate = healthCheck => healthCheck.Tags.Contains("ready")
+    });
 
     app.Run();
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "CleanArchitecture.Full.Api terminó de forma inesperada durante el arranque");
+    Log.Fatal(ex, "CleanArchitecture.Full.Api terminï¿½ de forma inesperada durante el arranque");
 }
 finally
 {

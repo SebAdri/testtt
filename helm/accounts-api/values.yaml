@@ -37,11 +37,12 @@ waitForPostgres:
   image: postgres:16
 
 probes:
-  path: /api/accounts
   readiness:
+    path: /health/ready
     initialDelaySeconds: 10
     periodSeconds: 10
   liveness:
+    path: /health/live
     initialDelaySeconds: 20
     periodSeconds: 15
 
@@ -52,5 +53,4 @@ resources: {}
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
-
 
