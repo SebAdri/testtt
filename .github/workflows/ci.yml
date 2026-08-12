@@ -111,6 +111,7 @@ jobs:
             --set image.repository=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/accounts-api `
             --set image.tag=${{ needs.ci.outputs.image_tag }} `
             --set image.pullPolicy=Always `
+            --set probes.path=/api/minimal/accounts `
             --wait `
             --timeout 3m
 
